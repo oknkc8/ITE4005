@@ -3,3 +3,5 @@
 
 # File
 /assignment1/test.cpp
+*.o
+*.exe
