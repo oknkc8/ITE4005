@@ -22,6 +22,13 @@ public:
 	VS attrs;
 	string attr_name;
 	int attr_idx;
+	UMI lable_count;
+
+	Node(VS attr_name) {
+		for (auto attr : attr_name) {
+			lable_count[attr] = 0;
+		}
+	}
 
 	bool is_leaf() {
 		if (child.size() == 0) {
@@ -42,6 +49,7 @@ private:
 	void make_Tree(Node* now, VVS t) {
 		if (is_homogeneous(t)) {
 			now->attr_name = t[0][col - 1];
+			now->lable_count[now->attr_name]++;
 			return;
 		}
 
@@ -63,11 +71,15 @@ private:
 		UMVVS child_rows = make_child(t, max_attr_idx);
 		for (auto child_row : child_rows) {
 			string attr_value = child_row.first;
-			Node* child = new Node();
+			Node* child = new Node(table.attr_name);
 			now->attrs.push_back(attr_value);
 
 			make_Tree(child, child_row.second);
+			
 			now->child.push_back(child);
+			for (auto label : child->lable_count) {
+				now->lable_count[label.first] += label.second;
+			}
 		}
 	}
 
@@ -100,7 +112,6 @@ private:
 		int idx = col - 1;
 
 		for (int i = 0; i < D; i++) {
-			//hash[*(t[i].end() - 1)]++;
 			hash[t[i][idx]]++;
 		}
 
@@ -178,6 +189,18 @@ private:
 				return make_decision(now->child[i], row);
 			}
 		}
+
+		// If no decision
+		// get the most label in Node
+		int count_max = 0;
+		string decision;
+		for (auto label : now->lable_count) {
+			if (count_max < label.second) {
+				count_max = label.second;
+				decision = label.first;
+			}
+		}
+		return decision;
 	}
 
 public:
@@ -187,7 +210,7 @@ public:
 	}
 
 	void train() {
-		Tree = new Node();
+		Tree = new Node(table.attr_name);
 		make_Tree(Tree, table.data);
 	}
 
@@ -256,7 +279,6 @@ public:
 class Output {
 private:
 	FILE * fp;
-	Table table;
 
 public:
 	Output(string output_file) {
@@ -268,10 +290,6 @@ public:
 	}
 
 	void print(Table result_table) {
-		printf("pp\n");
-		//table = result_table;
-
-		printf("pp\n");
 		// print attribute_name
 		for (int i = 0; i < result_table.attr_name.size(); i++) {
 			if (i == result_table.attr_name.size() - 1) {
@@ -282,7 +300,6 @@ public:
 			}
 		}
 
-		printf("pp\n");
 		// print attribute
 		for (auto row : result_table.data) {
 			for (int i = 0; i < row.size(); i++) {
@@ -314,17 +331,9 @@ int main(int argc, char* argv[]) {
 
 	Decision_Tree DT(train_table);
 	DT.train();
-	printf("dd\n");
-	//test_table = DT.test(test_table);
 	output.print(DT.test(test_table));
 
-
-	printf("dd\n");
-	printf("dd\n");
-	//output.print(test_table);
-
 	end = clock();
-	printf("dd\n");
 	printf("Total Running Time : %.3lfsec\n", (double)(end - start) / CLOCKS_PER_SEC);
 
 	return 0;
