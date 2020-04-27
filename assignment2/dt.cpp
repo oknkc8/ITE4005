@@ -49,6 +49,13 @@ private:
 	void make_Tree(Node* now, VVS t) {
 		if (is_homogeneous(t)) {
 			now->attr_name = t[0][col - 1];
+			now->lable_count[now->attr_name] += t.size();
+			return;
+		}
+
+		auto most_label = get_most_label(t);
+		if (most_label.second > 0.8) {
+			now->attr_name = most_label.first;
 			now->lable_count[now->attr_name]++;
 			return;
 		}
@@ -64,6 +71,14 @@ private:
 				max_attr_idx = attr_idx;
 			}
 		}
+
+		//printf("max gain ratio : %Lf\n",max_gain_ratio);
+		//printf("\n");
+
+		// printf("max gain ratio : %Lf\n",max_gain_ratio);
+		// if(max_gain_ratio <0.45 ){
+		// 	printf("!!!\n\n");
+		// }
 
 		now->attr_name = table.attr_name[max_attr_idx];
 		now->attr_idx = max_attr_idx;
@@ -84,12 +99,32 @@ private:
 	}
 
 	bool is_homogeneous(VVS t) {
-		if (get_entropy(t) == 0) {
+		ld d = get_entropy(t);
+		//cout<<d<<endl;
+		//if (get_entropy(t) == 0) {
+		if(d==0){
 			return true;
 		}
 		else {
 			return false;
 		}
+	}
+
+	pair<string, ld> get_most_label(VVS t) {
+		UMI hash;
+		int D = t.size();
+		int idx = col - 1;
+		string ret_label;
+		int max_cnt = 0;
+
+		for (int i = 0; i < D; i++) {
+			if(++hash[t[i][idx]] > max_cnt) {
+				max_cnt = hash[t[i][idx]];
+				ret_label = t[i][idx];
+			}
+		}
+		//cout<<ret_label<<"\t"<<max_cnt<<"/"<<D<<"\t"<<(ld)max_cnt/D<<endl;
+		return {ret_label, (ld)max_cnt / D};
 	}
 
 	UMVVS make_child(VVS t, int attr_idx) {
@@ -145,7 +180,12 @@ private:
 	}
 
 	ld gain(VVS t, int attr_idx) {
-		return get_entropy(t) - get_entropy_with_attr(t, attr_idx);
+		//return get_entropy(t) - get_entropy_with_attr(t, attr_idx);
+		ld et = get_entropy(t);
+		ld eta = get_entropy_with_attr(t, attr_idx);
+		//ld etl = get_entropy_with_attr(t, col - 1);
+		//printf("%Lf\t%Lf\n",et, eta);
+		return et-eta;
 	}
 
 	ld split_info(VVS t, int attr_idx) {
@@ -169,6 +209,8 @@ private:
 	ld gain_ratio(VVS t, int attr_idx) {
 		ld g = gain(t, attr_idx);
 		ld si = split_info(t, attr_idx);
+
+		//printf("%Lf\t%Lf\t%Lf\n",g, si, g/si);
 		
 		if (si == 0) {
 			return -1;
@@ -200,6 +242,7 @@ private:
 				decision = label.first;
 			}
 		}
+		//decision = "check!";
 		return decision;
 	}
 
@@ -224,6 +267,44 @@ public:
 		test_table.attr_name.push_back(*(table.attr_name.end() - 1));
 
 		return test_table;
+	}
+
+	void print_Tree() {
+		dfs(Tree, 1, 0);
+	}
+
+	void dfs(Node* now, bool is_first, int tab_cnt) {
+		// if (!is_first) {
+		// 	for (int i = 0; i < tab_cnt; i++) {
+		// 		cout << "\t\t";
+		// 	}
+		// }
+
+		if (now->is_leaf()) {
+			string tmp = now->attr_name + "(" + to_string(now->lable_count[now->attr_name]) + ")";
+			printf("%-16s\n", tmp.c_str());
+		}
+
+		else {
+			for (int i = 0; i < now->child.size(); i++) {
+				if (i > 0) {
+					for (int j = 0; j < tab_cnt; j++) {
+						for(int k = 0; k < 16; k++)
+							cout << " ";
+					}
+				}
+
+				string tmp = now->attr_name + "/" + now->attrs[i];
+				printf("%-16s", tmp.c_str());
+
+				if (i == 0) {
+					dfs(now->child[i], 1, tab_cnt + 1);		
+				}
+				else {
+					dfs(now->child[i], 0, tab_cnt + 1);		
+				}
+			}
+		}		
 	}
 };
 
@@ -331,6 +412,7 @@ int main(int argc, char* argv[]) {
 
 	Decision_Tree DT(train_table);
 	DT.train();
+	//DT.print_Tree();
 	output.print(DT.test(test_table));
 
 	end = clock();
