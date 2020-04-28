@@ -57,7 +57,9 @@ private:
 		auto most_label = get_most_label(t);
 		if (most_label.second > 0.8) {
 			now->attr_name = most_label.first;
-			now->lable_count[now->attr_name]++;
+			for (auto row : t) {
+				now->lable_count[row[col - 1]]++;
+			}
 			return;
 		}
 
@@ -65,7 +67,11 @@ private:
 		ld max_gain_ratio = 0;
 		int max_attr_idx = 0;
 		for (int attr_idx = 0; attr_idx < col - 1; attr_idx++) {
+			// gain ratio
 			ld now_gain_ratio = gain_ratio(t, attr_idx);
+
+			// gini index
+			//ld now_gain_ratio = gain(t, attr_idx);
 
 			if (now_gain_ratio > max_gain_ratio) {
 				max_gain_ratio = now_gain_ratio;
@@ -193,18 +199,10 @@ private:
 
 		for (auto i : hash) {
 			ld pi = (ld)i.second / (ld)D;
-			// gain ratio
 			entropy += (pi * log2l(pi));
-			
-			// gini index
-			//entropy += (pi * pi);
 		}
 
-		// gain ratio
 		return -entropy;
-
-		// gini index
-		//return 1 - entropy;
 	}
 
 	ld gain_ratio(VVS t, int attr_idx) {
@@ -392,7 +390,7 @@ int main(int argc, char* argv[]) {
 	clock_t start = clock(), end;
 
 	if (argc != 4) {
-		printf("E: You should input 3 parameters! => min_sup(%%), input_file_name, output_file_name\n");
+		printf("E: You should input 3 parameters! => train_file_name, test_file_name, output_file_name\n");
 		return 0;
 	}
 
