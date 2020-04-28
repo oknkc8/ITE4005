@@ -53,6 +53,7 @@ private:
 			return;
 		}
 
+		// Pruning
 		auto most_label = get_most_label(t);
 		if (most_label.second > 0.8) {
 			now->attr_name = most_label.first;
@@ -71,14 +72,6 @@ private:
 				max_attr_idx = attr_idx;
 			}
 		}
-
-		//printf("max gain ratio : %Lf\n",max_gain_ratio);
-		//printf("\n");
-
-		// printf("max gain ratio : %Lf\n",max_gain_ratio);
-		// if(max_gain_ratio <0.45 ){
-		// 	printf("!!!\n\n");
-		// }
 
 		now->attr_name = table.attr_name[max_attr_idx];
 		now->attr_idx = max_attr_idx;
@@ -99,10 +92,7 @@ private:
 	}
 
 	bool is_homogeneous(VVS t) {
-		ld d = get_entropy(t);
-		//cout<<d<<endl;
-		//if (get_entropy(t) == 0) {
-		if(d==0){
+		if (get_entropy(t) == 0) {
 			return true;
 		}
 		else {
@@ -123,7 +113,7 @@ private:
 				ret_label = t[i][idx];
 			}
 		}
-		//cout<<ret_label<<"\t"<<max_cnt<<"/"<<D<<"\t"<<(ld)max_cnt/D<<endl;
+
 		return {ret_label, (ld)max_cnt / D};
 	}
 
@@ -152,10 +142,18 @@ private:
 
 		for (auto i : hash) {
 			ld pi = (ld)i.second / (ld)D;
+			// gain ratio
 			entropy += (pi * log2l(pi));
+
+			// gini index
+			//entropy += (pi * pi);
 		}
 
+		// gain ratio
 		return -entropy;
+		
+		// gini index
+		//return 1 - entropy;
 	}
 
 	ld get_entropy_with_attr(VVS t, int attr_idx) {
@@ -180,12 +178,7 @@ private:
 	}
 
 	ld gain(VVS t, int attr_idx) {
-		//return get_entropy(t) - get_entropy_with_attr(t, attr_idx);
-		ld et = get_entropy(t);
-		ld eta = get_entropy_with_attr(t, attr_idx);
-		//ld etl = get_entropy_with_attr(t, col - 1);
-		//printf("%Lf\t%Lf\n",et, eta);
-		return et-eta;
+		return get_entropy(t) - get_entropy_with_attr(t, attr_idx);
 	}
 
 	ld split_info(VVS t, int attr_idx) {
@@ -200,17 +193,23 @@ private:
 
 		for (auto i : hash) {
 			ld pi = (ld)i.second / (ld)D;
+			// gain ratio
 			entropy += (pi * log2l(pi));
+			
+			// gini index
+			//entropy += (pi * pi);
 		}
 
+		// gain ratio
 		return -entropy;
+
+		// gini index
+		//return 1 - entropy;
 	}
 
 	ld gain_ratio(VVS t, int attr_idx) {
 		ld g = gain(t, attr_idx);
 		ld si = split_info(t, attr_idx);
-
-		//printf("%Lf\t%Lf\t%Lf\n",g, si, g/si);
 		
 		if (si == 0) {
 			return -1;
@@ -232,8 +231,8 @@ private:
 			}
 		}
 
-		// If no decision
-		// get the most label in Node
+		/* If no decision
+		   get the most label in Node */
 		int count_max = 0;
 		string decision;
 		for (auto label : now->lable_count) {
@@ -242,7 +241,6 @@ private:
 				decision = label.first;
 			}
 		}
-		//decision = "check!";
 		return decision;
 	}
 
@@ -274,12 +272,6 @@ public:
 	}
 
 	void dfs(Node* now, bool is_first, int tab_cnt) {
-		// if (!is_first) {
-		// 	for (int i = 0; i < tab_cnt; i++) {
-		// 		cout << "\t\t";
-		// 	}
-		// }
-
 		if (now->is_leaf()) {
 			string tmp = now->attr_name + "(" + to_string(now->lable_count[now->attr_name]) + ")";
 			printf("%-16s\n", tmp.c_str());
@@ -289,8 +281,9 @@ public:
 			for (int i = 0; i < now->child.size(); i++) {
 				if (i > 0) {
 					for (int j = 0; j < tab_cnt; j++) {
-						for(int k = 0; k < 16; k++)
-							cout << " ";
+						for(int k = 0; k < 16; k++) {
+							printf(" ");
+						}							
 					}
 				}
 
@@ -412,7 +405,10 @@ int main(int argc, char* argv[]) {
 
 	Decision_Tree DT(train_table);
 	DT.train();
+	
+	/* Print Decision Tree (stdout) */
 	//DT.print_Tree();
+
 	output.print(DT.test(test_table));
 
 	end = clock();
