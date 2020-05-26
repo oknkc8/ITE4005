@@ -1,6 +1,8 @@
 # Directory
 /assignment1/test/
 /.vscode
+.ipynb_checkpoints/
+__pycache__/
 
 # File
 /assignment1/test.cpp
