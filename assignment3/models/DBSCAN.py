@@ -2,10 +2,13 @@ import numpy as np
 from collections import defaultdict
 from collections import deque
 
+import pdb
+
 class DBSCAN:
-	def __init__(self, points, eps, minpts):
+	def __init__(self, obj_ids, points, eps, minpts):
 		super(DBSCAN, self).__init__()
 		
+		self.obj_ids = obj_ids
 		self.points = points
 		self.eps = eps
 		self.minpts = minpts
@@ -25,9 +28,6 @@ class DBSCAN:
 		p1 = self.points[i]
 		p2 = self.points[j]
 
-		import pdb
-		#pdb.set_trace()
-
 		if np.linalg.norm(p1 - p2) <= self.eps:
 			return True
 		else:
@@ -36,12 +36,15 @@ class DBSCAN:
 	def make_adj_list(self):
 		for i in range(len(self.points)):
 			for j in range(i+1, len(self.points)):
+				if self.points[j][0] - self.points[i][0] > self.eps:
+					break
+
 				if self.check_neighbor(i, j):
 					self.adj_list[i].append(j)
 					self.adj_list[j].append(i)
 
 	def is_core(self, i):
-		return (len(self.adj_list[i]) >= self.minpts)
+		return (len(self.adj_list[i]) + 1 >= self.minpts)
 
 	def bfs(self, core):
 		Q = deque([core])
@@ -53,14 +56,13 @@ class DBSCAN:
 				continue
 
 			for togo in self.adj_list[now]:
-				if self.label[togo] == 0:
+				if self.label[togo] <= 0:
 					self.label[togo] = self.cnt
 					Q.append(togo)
 
 	def cluster(self):
-		#for i in range(len(self.points)):
 		for i, _ in enumerate(self.points):
-			if self.label[i] != 0:
+			if self.label[i] > 0:
 				continue
 				
 			if self.is_core(i):
@@ -70,6 +72,6 @@ class DBSCAN:
 				self.label[i] = -1
 	
 		for i, L in enumerate(self.label):
-			self.clusters[L].append(i)
+			self.clusters[L].append(int(self.obj_ids[i]))
 
 		return self.clusters

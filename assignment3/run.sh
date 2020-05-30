@@ -4,4 +4,3 @@ python clustering.py \
 2 \
 7 \
 --output_path ./test \
-
