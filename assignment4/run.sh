@@ -1,7 +1,8 @@
-python recommender.py ./data/u2.base ./data/u2.test \
---factor 3 \
+python recommender_Pytorch.py ./data/u1.base ./data/u1.test \
+--output_path ./test_pytorch/ \
+--factor 10 \
 --lr 0.01 \
---reg 0.002 \
---epochs 100 \
+--wd 0.0001 \
+--epochs 300 \
 --log_step 1 \
 --print_log True \

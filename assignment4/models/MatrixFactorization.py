@@ -59,13 +59,6 @@ class MatrixFactorization:
 			for idx in idxs:
 				i, j = idx
 				self.update_value(i, j)
-
-
-			# for i in range(self.M):
-			# 	#pdb.set_trace()
-			# 	for j in range(self.N):
-			# 		if self.R[i][j] > 0:
-			# 			self.update_value(i, j)
 			
 			cost = self.get_loss()
 			cost_valid = self.get_valid_loss()
