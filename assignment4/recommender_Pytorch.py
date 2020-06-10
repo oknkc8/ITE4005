@@ -52,6 +52,7 @@ def Output(test_path, output_path, test_data, rating_result):
 
 	rating_result[rating_result > 5] = 5.0
 	rating_result[rating_result < 0] = 0
+	rating_result = np.around(rating_result)
 	
 	with open(file_path, 'w') as file:
 		for u, i, r in zip(user_id, item_id, rating_result):
