@@ -13,7 +13,9 @@ import time
 import pdb
 from tqdm import tqdm
 
-from models.MatrixFactorization_Pytorch import MatrixFactorization
+from models.MatrixFactorization_Pytorch import MatrixFactorization, CFNet
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
@@ -52,26 +54,30 @@ def Output(test_path, output_path, test_data, rating_result):
 
 	rating_result[rating_result > 5] = 5.0
 	rating_result[rating_result < 0] = 0
-	rating_result = np.around(rating_result)
+	#rating_result = np.around(rating_result)
 	
 	with open(file_path, 'w') as file:
 		for u, i, r in zip(user_id, item_id, rating_result):
 			file.write(str(u) + '\t' + str(i) + '\t' + str(r) + '\n')
 
 def train(model, R, train_data, test_data, epochs=100, lr=0.01, wd=0.0, print_log=True, log_step=10):
-	user_id = torch.LongTensor(train_data[:, 0])
-	item_id = torch.LongTensor(train_data[:, 1])
-	rating = torch.Tensor(train_data[:, -1])
+	user_id = torch.LongTensor(train_data[:, 0]).to(device)
+	item_id = torch.LongTensor(train_data[:, 1]).to(device)
+	rating = torch.Tensor(train_data[:, -1]).to(device)
 
 	model.train()
 
-	criterion = nn.MSELoss()
+	criterion = nn.L1Loss()
+	tmp_criterion = nn.MSELoss()
 	optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=wd)
 
-	for epoch in tqdm(range(epochs)):
+	#for epoch in tqdm(range(epochs)):
+	for epoch in range(epochs):
 		rating_predicted = model(user_id, item_id)
 		
-		loss = torch.sqrt(criterion(rating_predicted, rating))
+		#loss = torch.sqrt(criterion(rating_predicted, rating))
+		loss = criterion(rating_predicted, rating)
+		tmp_loss = torch.sqrt(tmp_criterion(rating_predicted, rating))
 
 		#pdb.set_trace()
 		optimizer.zero_grad()
@@ -82,25 +88,25 @@ def train(model, R, train_data, test_data, epochs=100, lr=0.01, wd=0.0, print_lo
 			#Validation
 			with torch.no_grad():
 				model.eval()
-				user_id_valid = torch.LongTensor(test_data[:, 0])
-				item_id_valid = torch.LongTensor(test_data[:, 1])
-				rating_valid = torch.LongTensor(test_data[:, -1])
+				user_id_valid = torch.LongTensor(test_data[:, 0]).to(device)
+				item_id_valid = torch.LongTensor(test_data[:, 1]).to(device)
+				rating_valid = torch.LongTensor(test_data[:, -1]).to(device)
 
 				rating_predicted = model(user_id_valid, item_id_valid)
 				
 				loss_valid = torch.sqrt(criterion(rating_predicted, rating_valid))
-				print('Epoch %d => Loss: %.5f, Valid_Loss: %.5f' % (epoch+1, loss.item(), loss_valid.item()))
+				print('Epoch %d => Loss: %.5f, Valid_Loss: %.5f' % (epoch+1, tmp_loss.item(), loss_valid.item()))
 
 			model.train()
 
 def test(model, test_data):
-	user_id = torch.LongTensor(test_data[:, 0])
-	item_id = torch.LongTensor(test_data[:, 1])
+	user_id = torch.LongTensor(test_data[:, 0]).to(device)
+	item_id = torch.LongTensor(test_data[:, 1]).to(device)
 	
 	model.eval()
 	rating_result = model(user_id, item_id)
 
-	return rating_result.detach().numpy()
+	return rating_result.detach().cpu().numpy()
 
 if __name__ == "__main__":
 	# argument parser
@@ -136,7 +142,8 @@ if __name__ == "__main__":
 	N = train_data[:, 1].max() + 5
 	bias = np.mean(R[R!=0])
 
-	model = MatrixFactorization(M, N, args.factor, bias)
+	#model = MatrixFactorization(M, N, args.factor, bias).to(device)
+	model = CFNet(M, N, args.factor).to(device)
 	train(model,
 		  R, 
 		  train_data, 
