@@ -4,11 +4,10 @@ import torch.nn.functional as F
 
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
 
 import argparse
+import os
 from os import path
-import easydict
 import time
 import pdb
 from tqdm import tqdm
@@ -46,6 +45,9 @@ def Input(train_path, test_path):
 	return R, train_data, test_data
 
 def Output(test_path, output_path, test_data, rating_result):
+	if path.exists(output_path) == False:
+		os.mkdir(output_path)
+
 	file_name = path.splitext(path.basename(test_path))[0] + '.base_prediction.txt'
 	file_path = path.join(output_path, file_name)
 
@@ -54,7 +56,6 @@ def Output(test_path, output_path, test_data, rating_result):
 
 	rating_result[rating_result > 5] = 5.0
 	rating_result[rating_result < 0] = 0
-	#rating_result = np.around(rating_result)
 	
 	with open(file_path, 'w') as file:
 		for u, i, r in zip(user_id, item_id, rating_result):
@@ -67,25 +68,21 @@ def train(model, R, train_data, test_data, epochs=100, lr=0.01, wd=0.0, print_lo
 
 	model.train()
 
-	criterion = nn.L1Loss()
-	tmp_criterion = nn.MSELoss()
+	criterion = nn.MSELoss()
 	optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=wd)
 
-	#for epoch in tqdm(range(epochs)):
-	for epoch in range(epochs):
+	for epoch in tqdm(range(epochs)):
+		# Training
 		rating_predicted = model(user_id, item_id)
 		
-		#loss = torch.sqrt(criterion(rating_predicted, rating))
-		loss = criterion(rating_predicted, rating)
-		tmp_loss = torch.sqrt(tmp_criterion(rating_predicted, rating))
-
-		#pdb.set_trace()
+		loss_train = torch.sqrt(criterion(rating_predicted, rating))
+		
 		optimizer.zero_grad()
-		loss.backward()
+		loss_train.backward()
 		optimizer.step()
 
 		if print_log and (epoch+1) % log_step == 0:
-			#Validation
+			# Validation
 			with torch.no_grad():
 				model.eval()
 				user_id_valid = torch.LongTensor(test_data[:, 0]).to(device)
@@ -95,7 +92,7 @@ def train(model, R, train_data, test_data, epochs=100, lr=0.01, wd=0.0, print_lo
 				rating_predicted = model(user_id_valid, item_id_valid)
 				
 				loss_valid = torch.sqrt(criterion(rating_predicted, rating_valid))
-				print('Epoch %d => Loss: %.5f, Valid_Loss: %.5f' % (epoch+1, tmp_loss.item(), loss_valid.item()))
+				print('Epoch %d => Train_Loss: %.5f, Valid_Loss: %.5f' % (epoch+1, loss_train.item(), loss_valid.item()))
 
 			model.train()
 
@@ -115,24 +112,16 @@ if __name__ == "__main__":
 	parser.add_argument("test_path", type=str, help="Test data file name")
 	
 	parser.add_argument("--output_path", type=str, default='./test/', help="Output file path")
-	parser.add_argument("--factor", type=int, default=3, help="Latent Parameter")
-	parser.add_argument("--lr", type=float, default=0.01, help="Learning Rate")
-	parser.add_argument("--wd", type=float, default=0.0, help="Weight Decay")
-	parser.add_argument("--epochs", type=int, default=100, help="Training Epochs")
-	parser.add_argument("--log_step", type=int, default=10, help="Training Epochs")
-	parser.add_argument("--print_log", type=str2bool, default=False, help="Training Epochs")
+	parser.add_argument("--model", type=str, default='MF', help="Choose Model")
+	parser.add_argument("--factor", type=int, default=5, help="Latent Parameter")
+	parser.add_argument("--lr", type=float, default=1e-3, help="Learning Rate")
+	parser.add_argument("--wd", type=float, default=1e-4, help="Weight Decay")
+	parser.add_argument("--epochs", type=int, default=10000, help="Training Epochs")
+	parser.add_argument("--log_step", type=int, default=100, help="Training Epochs")
+	parser.add_argument("--print_log", type=str2bool, default=True, help="Training Epochs")
+	parser.add_argument("--record", type=str2bool, default=False, help="Record Training Info")
 
 	args = parser.parse_args()
-	# args = easydict.EasyDict({
-	# 	"train_path" : "~/Hanyang/4-1/ITE4005/assignment4/data/u1.base",
-	# 	"test_path" : "~/Hanyang/4-1/ITE4005/assignment4/data/u1.test",
-	# 	"output_path" : "~/Hanyang/4-1/ITE4005/assignment4/test/",
-	# 	"factor" : 10,
-	# 	"lr" : 0.05,
-	# 	"epochs" : 50,
-	# 	"log_step" : 1,
-	# 	"print_log" : True
-	# })
 
 	start_time = time.time()
 	
@@ -142,8 +131,14 @@ if __name__ == "__main__":
 	N = train_data[:, 1].max() + 5
 	bias = np.mean(R[R!=0])
 
-	#model = MatrixFactorization(M, N, args.factor, bias).to(device)
-	model = CFNet(M, N, args.factor).to(device)
+	if args.model == 'MF':
+		model = MatrixFactorization(M, N, args.factor, bias).to(device)
+	elif args.model == 'CFNet':
+		model = CFNet(M, N, args.factor).to(device)
+
+	print('Training Info')
+	print('Model: ' + args.model)
+	print('f: %d, Epoch: %d, lr: %f, wd: %f \n' % (args.factor, args.epochs, args.lr, args.wd))
 	train(model,
 		  R, 
 		  train_data, 
@@ -156,9 +151,14 @@ if __name__ == "__main__":
 
 	rating_result = test(model, test_data)
 
-	Output(args.test_path, args.output_path, test_data, rating_result)
-
+	output_path = args.output_path
+	if args.record:
+		output_path = './test_' + args.model + '_f(' + str(args.factor) + ')_epoch(' + str(args.epochs) + ')_lr(' + str(args.lr) + ')_wd(' + str(args.wd) + ')/'
+	Output(args.test_path, output_path, test_data, rating_result)
 
 	end_time = time.time()
 
-	print('Total Running Time: %.5f' % (end_time - start_time))
+	print('\nTotal Running Time: %.5f' % (end_time - start_time))
+	print('Training Info')
+	print('Model: ' + args.model)
+	print('f: %d, Epoch: %d, lr: %f, wd: %f \n' % (args.factor, args.epochs, args.lr, args.wd))
