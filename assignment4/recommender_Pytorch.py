@@ -55,7 +55,7 @@ def Output(test_path, output_path, test_data, rating_result):
 	item_id = test_data[:, 1]
 
 	rating_result[rating_result > 5] = 5.0
-	rating_result[rating_result < 0] = 0
+	rating_result[rating_result < 1] = 1.0
 	
 	with open(file_path, 'w') as file:
 		for u, i, r in zip(user_id, item_id, rating_result):
