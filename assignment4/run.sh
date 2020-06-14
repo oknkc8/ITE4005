@@ -1,4 +1,4 @@
-CUDA_VISIBLE_DEVICES=7 python recommender_Pytorch.py ./data/u1.base ./data/u1.test \
+CUDA_VISIBLE_DEVICES=7 python recommender_Pytorch.py ./data/u5.base ./data/u5.test \
 --output_path ./test_net/ \
 --model CFNet \
 --factor 5 \

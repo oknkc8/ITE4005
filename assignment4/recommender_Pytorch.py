@@ -112,7 +112,7 @@ if __name__ == "__main__":
 	parser.add_argument("test_path", type=str, help="Test data file name")
 	
 	parser.add_argument("--output_path", type=str, default='./test/', help="Output file path")
-	parser.add_argument("--model", type=str, default='MF', help="Choose Model")
+	parser.add_argument("--model", type=str, default='MF', help="Choose Model(MF, CFNet)")
 	parser.add_argument("--factor", type=int, default=5, help="Latent Parameter")
 	parser.add_argument("--lr", type=float, default=1e-3, help="Learning Rate")
 	parser.add_argument("--wd", type=float, default=1e-4, help="Weight Decay")

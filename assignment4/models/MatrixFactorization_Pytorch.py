@@ -44,7 +44,6 @@ class CFNet(nn.Module):
 		self.relu = nn.ReLU()
 		self.dropout = nn.Dropout(0.1)
 
-
 	def forward(self, users, items):
 		#pdb.set_trace()
 		U = self.user_emb(users)
